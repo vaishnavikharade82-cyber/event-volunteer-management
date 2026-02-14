@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function NewEventPage() {
   const router = useRouter();
@@ -10,29 +11,48 @@ export default function NewEventPage() {
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
   const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-    const newEvent = {
-      id: Date.now(),
+  // ✅ Get current logged in user
+  // Get current logged in user
+const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+const user = session?.user;
+
+if (!user) {
+  alert("You must be logged in");
+  setLoading(false);
+  router.push("/login");
+  return;
+}
+
+  // ✅ Insert event WITH user_id
+  const { error } = await supabase.from("events").insert([
+    {
       title,
       location,
       date,
       description,
-    };
+      user_id: user.id, // ⭐ VERY IMPORTANT
+    },
+  ]);
 
-    // ✅ FIXED LINE (array, not object)
-    const storedEvents =
-      JSON.parse(localStorage.getItem("events") || "[]");
+  setLoading(false);
 
-    localStorage.setItem(
-      "events",
-      JSON.stringify([...storedEvents, newEvent])
-    );
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
-    router.push("/events");
-  };
+  alert("Event created successfully!");
+  router.push("/events");
+};
 
   return (
     <div className="create-event-page">
@@ -83,9 +103,11 @@ export default function NewEventPage() {
             />
           </div>
 
-          <button className="submit-btn">Create Event</button>
+          <button className="submit-btn" disabled={loading}>
+            {loading ? "Creating..." : "Create Event"}
+          </button>
         </form>
       </div>
     </div>
   );
-} 
+}

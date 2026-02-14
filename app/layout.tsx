@@ -1,5 +1,7 @@
 import "./globals.css";
+import Navbar from "../components/Navbar";
 import Footer from "../components/footer";
+import { AuthProvider } from "../context/AuthContext"; // ✅ ADD THIS
 
 export default function RootLayout({
   children,
@@ -9,8 +11,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
-        <Footer />
+        <AuthProvider>   {/* ✅ WRAP EVERYTHING */}
+          <Navbar />
+          {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

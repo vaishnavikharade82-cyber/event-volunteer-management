@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
 
 type EventType = {
-  id: number;
+  id: string;
   title: string;
   location: string;
   date: string;
@@ -13,66 +14,69 @@ type EventType = {
 
 export default function EventsPage() {
   const [events, setEvents] = useState<EventType[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // ✅ LOAD EVENTS FROM LOCALSTORAGE
   useEffect(() => {
-    const storedEvents = JSON.parse(
-      localStorage.getItem("events") || "[]"
-    );
-    setEvents(storedEvents);
+    const init = async () => {
+      // ✅ Check if user logged in
+      const { data } = await supabase.auth.getSession();
+
+      if (!data.session) {
+        window.location.href = "/login";
+        return;
+      }
+
+      // ✅ Fetch events
+      const { data: eventsData, error } = await supabase
+        .from("events")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!error && eventsData) {
+        setEvents(eventsData);
+      }
+
+      setLoading(false);
+    };
+
+    init();
   }, []);
 
-  // ✅ DELETE EVENT (also remove from localStorage)
-  const handleDelete = (id: number) => {
-    const updatedEvents = events.filter((e) => e.id !== id);
-    setEvents(updatedEvents);
-    localStorage.setItem("events", JSON.stringify(updatedEvents));
-  };
+  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
 
-  return (
-    <div className="events-page">
-      <div className="events-header">
-        <div>
-          <h1>Discover Events</h1>
-          <p>All events you have created</p>
-        </div>
-
-        <Link href="/events/new">
-          <button className="create-btn">+ Create Event</button>
-        </Link>
+return (
+  <div className="events-container">
+    <div className="events-header">
+      <div>
+        <h1>Discover Events</h1>
+        <p>All events you have created</p>
       </div>
 
-      <div className="events-list">
-        {events.length === 0 && (
-          <p style={{ marginTop: "20px" }}>No events created yet.</p>
-        )}
-
-        {events.map((event) => (
-          <div key={event.id} className="event-card">
-            <h3>{event.title}</h3>
-
-            <p className="meta">📍 {event.location}</p>
-            <p className="meta">📅 {event.date}</p>
-            <p className="description">{event.description}</p>
-
-            {/* BUTTON ROW */}
-            <div className="event-actions">
-              <Link href={`/volunteers/new?eventId=${event.id}`}>
-                <button className="assign-btn">
-                  👤 Assign Volunteer
-                </button>
-              </Link>
-
-              <button
-                className="delete-btn"
-                onClick={() => handleDelete(event.id)}
-              >
-                🗑 Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <Link href="/events/new">
+        <button className="create-btn">+ Create Event</button>
+      </Link>
     </div>
-  );
+
+    {events.length === 0 && <p>No events created yet.</p>}
+
+    {events.map((event) => (
+      <div key={event.id} className="event-card">
+        <h3>{event.title}</h3>
+        <p>📍 {event.location}</p>
+        <p>📅 {event.date}</p>
+        <p>{event.description}</p>
+
+        <div className="event-actions">
+          <Link href={`/volunteers/new?eventId=${event.id}`}>
+            <button className="assign-btn">👤 Assign Volunteer</button>
+          </Link>
+
+          <button className="delete-btn">
+            🗑 Delete
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
+);
 }

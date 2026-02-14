@@ -2,40 +2,64 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function VolunteerForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ✅ NEW: read eventId from URL
+  // eventId is UUID (string)
   const eventId = searchParams.get("eventId");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const newVolunteer = {
-      id: Date.now(),
-      name,
-      email,
-      phone,
-      // ✅ NEW: save eventId with volunteer
-      eventId: eventId ? Number(eventId) : null,
-    };
+    if (!eventId) {
+      alert("Event ID missing");
+      return;
+    }
 
-    const existing = JSON.parse(
-      localStorage.getItem("volunteers") || "[]"
-    );
+    setLoading(true);
 
-    localStorage.setItem(
-      "volunteers",
-      JSON.stringify([...existing, newVolunteer])
-    );
+    // ✅ PHASE C — GET LOGGED-IN USER
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    router.push("/volunteers");
+    if (userError || !user) {
+      alert("You must be logged in");
+      setLoading(false);
+      return;
+    }
+
+    // ✅ INSERT WITH user_id (REQUIRED FOR RLS)
+    const { error } = await supabase
+      .from("volunteers")
+      .insert([
+        {
+          name,
+          email,
+          phone,
+          event_id: eventId, // UUID
+          user_id: user.id,  // 🔐 AUTH LINK
+        },
+      ]);
+
+    setLoading(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Volunteer registered successfully!");
+    router.push("/events");
   };
 
   return (
@@ -76,8 +100,12 @@ export default function VolunteerForm() {
             />
           </div>
 
-          <button type="submit" className="submit-btn">
-            Register Volunteer
+          <button
+            type="submit"
+            className="submit-btn"
+            disabled={loading}
+          >
+            {loading ? "Registering..." : "Register Volunteer"}
           </button>
         </form>
       </div>
