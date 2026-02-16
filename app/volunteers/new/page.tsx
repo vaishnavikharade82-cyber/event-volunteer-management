@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function RegisterVolunteer() {
+function RegisterVolunteer() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId");
@@ -13,6 +13,14 @@ export default function RegisterVolunteer() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const inputStyle = {
+    width: "100%",
+    padding: "12px",
+    marginBottom: "15px",
+    borderRadius: "10px",
+    border: "1px solid #ddd",
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,8 +66,9 @@ export default function RegisterVolunteer() {
         }}
       >
         <h2 style={{ fontSize: "28px", marginBottom: "10px" }}>
-          📝 Register Volunteer
+          👩‍💼 Register Volunteer
         </h2>
+
         <p style={{ marginBottom: "20px", color: "gray" }}>
           Fill the details below
         </p>
@@ -95,7 +104,8 @@ export default function RegisterVolunteer() {
             style={{
               width: "100%",
               padding: "12px",
-              background: "linear-gradient(to right, #2563eb, #1d4ed8)",
+              background:
+                "linear-gradient(to right, #2563eb, #1d4ed8)",
               color: "white",
               border: "none",
               borderRadius: "10px",
@@ -112,10 +122,10 @@ export default function RegisterVolunteer() {
   );
 }
 
-const inputStyle = {
-  width: "100%",
-  padding: "12px",
-  marginBottom: "15px",
-  borderRadius: "10px",
-  border: "1px solid #ddd",
-};
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <RegisterVolunteer />
+    </Suspense>
+  );
+}
